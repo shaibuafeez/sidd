@@ -174,38 +174,63 @@ export function NFTCard({ nft }: NFTCardProps) {
         earrings: traitsMap.get('earrings') || 'Unknown',
       };
       
-      // Step 4: Show preview and confirm
-      const confirmed = confirm(
-        `Are you sure you want to evolve this NFT to "${metadata.name}"?\n\n` +
-        `Traits:\n` +
+      // Step 4: Show preview and evolution type selection
+      const evolutionType = confirm(
+        `Evolve "${metadata.name}" with these traits:\n\n` +
         `• Background: ${traits.background}\n` +
         `• Skin: ${traits.skin}\n` +
         `• Clothes: ${traits.clothes}\n\n` +
-        `This will burn your SUDOZ ARTIFACT and create a THE SUDOZ NFT. This action cannot be undone!`
+        `Choose evolution type:\n` +
+        `✅ OK = KIOSK EVOLUTION (Marketplace Ready + Royalties)\n` +
+        `❌ Cancel = BASIC EVOLUTION (Simple Transfer)\n\n` +
+        `Kiosk evolution creates a kiosk with locked NFT for trading. Basic evolution gives you the NFT directly.`
       );
       
-      if (!confirmed) return;
-      
-      // Step 5: Execute evolution transaction
+      // Step 5: Execute evolution transaction based on user choice
       const tx = new Transaction();
       
-      tx.moveCall({
-        target: `${CONTRACT_CONSTANTS.PACKAGE_ID}::${CONTRACT_CONSTANTS.MODULE_NAME}::${CONTRACT_CONSTANTS.FUNCTIONS.EVOLVE_ARTIFACT}`,
-        arguments: [
-          tx.object(objectId),
-          tx.object(CONTRACT_CONSTANTS.GLOBAL_STATS_ID),
-          tx.object(CONTRACT_CONSTANTS.EVOLVED_STATS_ID),
-          tx.object(CONTRACT_CONSTANTS.RANDOM_OBJECT_ID),
-          tx.pure.u64(selectedMetadataId),
-          tx.pure.string(traits.background),
-          tx.pure.string(traits.skin),
-          tx.pure.string(traits.clothes),
-          tx.pure.string(traits.hats),
-          tx.pure.string(traits.eyewear),
-          tx.pure.string(traits.mouth),
-          tx.pure.string(traits.earrings),
-        ],
-      });
+      if (evolutionType) {
+        // Kiosk Evolution (with TransferPolicy)
+        tx.moveCall({
+          target: `${CONTRACT_CONSTANTS.PACKAGE_ID}::${CONTRACT_CONSTANTS.MODULE_NAME}::${CONTRACT_CONSTANTS.FUNCTIONS.EVOLVE_ARTIFACT_WITH_POLICY}`,
+          arguments: [
+            tx.object(objectId),
+            tx.object(CONTRACT_CONSTANTS.TRANSFER_POLICY_ID),
+            tx.object(CONTRACT_CONSTANTS.GLOBAL_STATS_ID),
+            tx.object(CONTRACT_CONSTANTS.EVOLVED_STATS_ID),
+            tx.object(CONTRACT_CONSTANTS.RANDOM_OBJECT_ID),
+            tx.pure.u64(selectedMetadataId),
+            tx.pure.string(traits.background),
+            tx.pure.string(traits.skin),
+            tx.pure.string(traits.clothes),
+            tx.pure.string(traits.hats),
+            tx.pure.string(traits.eyewear),
+            tx.pure.string(traits.mouth),
+            tx.pure.string(traits.earrings),
+          ],
+        });
+        console.log('Using Kiosk Evolution - NFT will be locked in kiosk for marketplace trading');
+      } else {
+        // Basic Evolution (simple transfer)
+        tx.moveCall({
+          target: `${CONTRACT_CONSTANTS.PACKAGE_ID}::${CONTRACT_CONSTANTS.MODULE_NAME}::${CONTRACT_CONSTANTS.FUNCTIONS.EVOLVE_ARTIFACT}`,
+          arguments: [
+            tx.object(objectId),
+            tx.object(CONTRACT_CONSTANTS.GLOBAL_STATS_ID),
+            tx.object(CONTRACT_CONSTANTS.EVOLVED_STATS_ID),
+            tx.object(CONTRACT_CONSTANTS.RANDOM_OBJECT_ID),
+            tx.pure.u64(selectedMetadataId),
+            tx.pure.string(traits.background),
+            tx.pure.string(traits.skin),
+            tx.pure.string(traits.clothes),
+            tx.pure.string(traits.hats),
+            tx.pure.string(traits.eyewear),
+            tx.pure.string(traits.mouth),
+            tx.pure.string(traits.earrings),
+          ],
+        });
+        console.log('Using Basic Evolution - NFT will be transferred directly to you');
+      }
 
       const result = await signAndExecute({
         transaction: tx,
